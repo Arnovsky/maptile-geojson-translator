@@ -37,23 +37,6 @@ public class BoundingBox {
         return Math.toDegrees(Math.atan(Math.sinh(n)));
     }
 
-    public double getNorth() {
-        return north;
-    }
-
-    public double getSouth() {
-        return south;
-    }
-
-    public double getEast() {
-        return east;
-    }
-
-    public double getWest() {
-        return west;
-    }
-
-
     public List<Position> convertToCoordinates() {
         return Lists.newArrayList(
                 new Position(this.east, this.north),

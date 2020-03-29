@@ -9,5 +9,4 @@ public class GeoJsonTranslatorApplication {
     public static void main(String[] args) {
         SpringApplication.run(GeoJsonTranslatorApplication.class, args);
     }
-
 }

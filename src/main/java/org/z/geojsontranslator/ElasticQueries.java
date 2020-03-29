@@ -14,6 +14,7 @@ import org.elasticsearch.search.aggregations.bucket.geogrid.GeoGrid;
 import org.elasticsearch.search.aggregations.bucket.geogrid.GeoGridAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -24,6 +25,9 @@ import java.util.stream.Collectors;
  */
 @Service
 public class ElasticQueries {
+    @Value("${spring.elasticsearch.rest.index}")
+    private String index;
+
     private final RestHighLevelClient highLevelClient;
 
     public ElasticQueries(RestHighLevelClient highLevelClient) {
@@ -47,7 +51,7 @@ public class ElasticQueries {
                 .size(1500);
 
         SearchRequest searchRequest = new SearchRequest()
-                .indices("india_marine_vessels")
+                .indices(index)
                 .source(SearchSourceBuilder.searchSource()
                         .query(QueryBuilders.matchAllQuery())
                         .aggregation(geoTile));

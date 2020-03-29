@@ -15,7 +15,6 @@ import java.util.Map;
 
 @RestController
 public class ClusteringController {
-
     private final ElasticQueries elasticQueries;
 
     public ClusteringController(ElasticQueries elasticQueries) {
