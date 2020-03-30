@@ -9,22 +9,24 @@ import org.elasticsearch.common.geo.GeoBoundingBox;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
-import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.geogrid.GeoGrid;
 import org.elasticsearch.search.aggregations.bucket.geogrid.GeoGridAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * very original name
  */
 @Service
 public class ElasticQueries {
+    public static final int QUERY_MAX_SIZE = 1500;
     @Value("${spring.elasticsearch.rest.index}")
     private String index;
 
@@ -35,20 +37,20 @@ public class ElasticQueries {
     }
 
     @SneakyThrows
-    public Map<String, Long> aggregateEntities() {
+    public Map<String, Map<String, Object>> aggregateEntities(Coordinates coordinates) {
         TermsAggregationBuilder terms = AggregationBuilders.terms("terms")
                 .field("vessel_type.keyword")
-                .size(1500);
+                .size(QUERY_MAX_SIZE);
 
         GeoGridAggregationBuilder geoTile = AggregationBuilders.geotileGrid("grid")
                 .field("coordinates")
                 .setGeoBoundingBox(new GeoBoundingBox(
-                        new GeoPoint(50, -46),
-                        new GeoPoint(-31, -164)
+                        new GeoPoint(coordinates.getTopLeft().getX(), coordinates.getTopLeft().getY()),
+                        new GeoPoint(coordinates.getBottomRight().getX(), coordinates.getBottomRight().getY())
                 ))
-                .precision(4)
+                .precision(coordinates.getZoomLevel())
                 .subAggregation(terms)
-                .size(1500);
+                .size(QUERY_MAX_SIZE);
 
         SearchRequest searchRequest = new SearchRequest()
                 .indices(index)
@@ -59,8 +61,19 @@ public class ElasticQueries {
         SearchResponse response = highLevelClient.search(searchRequest, RequestOptions.DEFAULT);
         GeoGrid grid = response.getAggregations().get("grid");
 
-        return grid.getBuckets().stream()
-                .collect(Collectors.toMap(
-                        MultiBucketsAggregation.Bucket::getKeyAsString, MultiBucketsAggregation.Bucket::getDocCount));
+
+        HashMap<String, Map<String, Object>> tileToProperties = new HashMap<>();
+        for (GeoGrid.Bucket bucket : grid.getBuckets()) {
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("Total Entities", bucket.getDocCount());
+
+            ParsedStringTerms parsedStringTerms = bucket.getAggregations().get("terms");
+            for (Terms.Bucket termsBucket : parsedStringTerms.getBuckets()) {
+                properties.put(termsBucket.getKeyAsString(), termsBucket.getDocCount());
+            }
+
+            tileToProperties.put(bucket.getKeyAsString(), properties);
+        }
+        return tileToProperties;
     }
 }
