@@ -33,7 +33,7 @@ export class CesiumDirective implements OnInit {
       const southEast = [Cesium.Math.toDegrees(rect.south), Cesium.Math.toDegrees(rect.east)]; //bottomRight corner
 
       console.log(northWest, southEast);
-      http.post("http://localhost:8080/query", {
+      http.post("/query", {
         topLeft: northWest,
         bottomRight: southEast,
         zoomLevel: this.detectZoomLevel(carto.height) + 3
