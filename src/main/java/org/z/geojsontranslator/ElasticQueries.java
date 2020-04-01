@@ -16,6 +16,7 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -24,9 +25,11 @@ import java.util.Map;
 /**
  * very original name
  */
+@PropertySource("classpath:application.properties")
 @Service
 public class ElasticQueries {
     public static final int QUERY_MAX_SIZE = 1500;
+
     @Value("${spring.elasticsearch.rest.index}")
     private String index;
 
