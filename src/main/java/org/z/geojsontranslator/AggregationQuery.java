@@ -24,10 +24,16 @@ import java.util.stream.Collectors;
 
 @Service
 public class AggregationQuery {
-    public static final int QUERY_MAX_SIZE = 1500;
+    private static final int QUERY_MAX_SIZE = 1500;
 
     @Value("${org.z.geojsontranslator.elastic.index}")
     private String index;
+
+    @Value("${org.z.geojsontranslator.elastic.termsField}")
+    private String termsField;
+
+    @Value("${org.z.geojsontranslator.elastic.geoTileField}")
+    private String geoTileField;
 
     private final RestHighLevelClient highLevelClient;
 
@@ -64,11 +70,11 @@ public class AggregationQuery {
 
     private SearchRequest createSearchRequest(Coordinates coordinates) {
         TermsAggregationBuilder terms = AggregationBuilders.terms("terms")
-                .field("vessel_type.keyword")
+                .field(termsField)
                 .size(QUERY_MAX_SIZE);
 
         GeoGridAggregationBuilder geoTile = AggregationBuilders.geotileGrid("grid")
-                .field("coordinates")
+                .field(geoTileField)
                 .setGeoBoundingBox(new GeoBoundingBox(
                         new GeoPoint(coordinates.getTopLeft().getX(), coordinates.getTopLeft().getY()),
                         new GeoPoint(coordinates.getBottomRight().getX(), coordinates.getBottomRight().getY())

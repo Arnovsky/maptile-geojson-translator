@@ -22,19 +22,28 @@ public final class GeoJsonConverter {
 
     public static FeatureCollection convertTilesToGeoJson(Map<String, Map<String, Object>> tileToEntityCount) {
         List<Feature> features = tileToEntityCount.entrySet().stream()
-                .map(entry -> createFeature(entry.getValue(), createCoordinatesForCode(entry.getKey())))
+                .map(entry -> createFeature(entry.getValue(), createCoordinatesForTile(entry.getKey())))
                 .collect(Collectors.toList());
 
         LOGGER.info("returned {} features", features.size());
         return new FeatureCollection(features);
     }
 
-    private static List<Position> createCoordinatesForCode(String codes) {
-        int[] convertedCodes = Arrays.stream(codes.split("/")).mapToInt(Integer::parseInt).toArray();
+    /**
+     * convert a WMTS tiles to coordinates fo their bounding boxes.
+     *
+     * @param tiles expecting a WMTS tile at the format "6/13/15" or "{zoom}/{x}/{y}"
+     * @return list of coordinates of the bounding box of the tile.
+     */
+    private static List<Position> createCoordinatesForTile(String tiles) {
+        int[] convertedTiles = Arrays.stream(tiles.split("/"))
+                .mapToInt(Integer::parseInt)
+                .toArray();
+
         return BoundingBox.tile2boundingBox(
-                convertedCodes[1], // X
-                convertedCodes[2], // Y
-                convertedCodes[0]  // Zoom level
+                convertedTiles[1], // X
+                convertedTiles[2], // Y
+                convertedTiles[0]  // Zoom level
         ).convertToCoordinates();
     }
 

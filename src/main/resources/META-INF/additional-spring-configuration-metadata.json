@@ -1,0 +1,24 @@
+{
+  "properties": [
+    {
+      "name": "org.z.geojsontranslator.elastic.index",
+      "type": "java.lang.String",
+      "description": "the index to query on."
+    },
+    {
+      "name": "org.z.geojsontranslator.elastic.termsField",
+      "type": "java.lang.String",
+      "description": "field to base the Terms aggregation on."
+    },
+    {
+      "name": "org.z.geojsontranslator.elastic.geoTileField",
+      "type": "java.lang.String",
+      "description": "field to base the geoTile aggregation on."
+    },
+    {
+      "name": "org.z.geojsontranslator.prod",
+      "type": "java.lang.String",
+      "description": "should the app run with CORS."
+    }
+  ]
+}
