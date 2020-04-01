@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class AggregationQuery {
     public static final int QUERY_MAX_SIZE = 1500;
 
-    @Value("${spring.elasticsearch.rest.index}")
+    @Value("${org.z.geojsontranslator.elastic.index}")
     private String index;
 
     private final RestHighLevelClient highLevelClient;
@@ -40,9 +40,13 @@ public class AggregationQuery {
         SearchRequest searchRequest = createSearchRequest(coordinates);
 
         SearchResponse response = highLevelClient.search(searchRequest, RequestOptions.DEFAULT);
-        GeoGrid grid = response.getAggregations().get("grid");
+        return parseAggregation(response);
+    }
 
+    private static Map<String, Map<String, Object>> parseAggregation(SearchResponse response) {
         HashMap<String, Map<String, Object>> tileToProperties = new HashMap<>();
+
+        GeoGrid grid = response.getAggregations().get("grid");
         for (GeoGrid.Bucket bucket : grid.getBuckets()) {
             // insert the sub-aggregation into the properties map.
             ParsedStringTerms parsedStringTerms = bucket.getAggregations().get("terms");

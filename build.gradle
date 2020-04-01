@@ -67,6 +67,7 @@ task buildAngular(type: Exec) {
     }
 
     copy {
+        mkdir "$projectDir/src/main/resources/public"
         from "$webappDir/dist/webapp"
         into "$projectDir/src/main/resources/public"
     }
