@@ -1,14 +1,51 @@
-import { Directive, ElementRef, OnInit } from '@angular/core';
-import { HttpClient } from "@angular/common/http";
+import {Directive, ElementRef} from '@angular/core';
+import {HttpClient} from "@angular/common/http";
+
+interface Coordinates {
+  topLeft: Array<number>;
+  bottomRight: Array<number>;
+  zoomLevel: number;
+}
 
 @Directive({
   selector: '[appCesium]'
 })
-export class CesiumDirective implements OnInit {
+export class CesiumDirective {
   private readonly viewer: any;
 
   constructor(private el: ElementRef, private http: HttpClient) {
-    this.viewer = new Cesium.Viewer(this.el.nativeElement, {
+    this.viewer = this.createCesiumViewer();
+    this.viewer.camera.moveEnd.addEventListener(() => this.reloadGeoJsonOnMove());
+  }
+
+  private reloadGeoJsonOnMove(): void {
+    this.http.post("/query", this.calculateCoordinates())
+      .subscribe((res) => {
+        if (res['features'] === undefined) {
+          return;
+        }
+
+        this.viewer.dataSources.removeAll();
+        Cesium.GeoJsonDataSource.load(res, {})
+          .then((dataSource) => this.viewer.dataSources.add(dataSource));
+      })
+  }
+
+  private calculateCoordinates(): Coordinates {
+    const positionCartographic = this.viewer.camera.positionCartographic;
+    const rect = this.getViewRectangle();
+    const northWest = [Cesium.Math.toDegrees(rect.north), Cesium.Math.toDegrees(rect.west)]; //topLeft corner
+    const southEast = [Cesium.Math.toDegrees(rect.south), Cesium.Math.toDegrees(rect.east)]; //bottomRight corner
+
+    return {
+      topLeft: northWest,
+      bottomRight: southEast,
+      zoomLevel: this.detectZoomLevel(positionCartographic.height) + 3
+    };
+  }
+
+  private createCesiumViewer(): any {
+    return new Cesium.Viewer(this.el.nativeElement, {
       geocoder: false,
       timeline: false,
       sceneModePicker: false,
@@ -22,39 +59,11 @@ export class CesiumDirective implements OnInit {
       creditViewport: undefined,
       mapMode2D: Cesium.MapMode2D.INFINITE_SCROLL
     });
-
-    this.viewer.camera.moveEnd.addEventListener(() => {
-      const carto = this.viewer.camera.positionCartographic;
-      console.log(this.detectZoomLevel(carto.height));
-
-      const rect = this.getViewRectangle();
-
-      const northWest = [Cesium.Math.toDegrees(rect.north), Cesium.Math.toDegrees(rect.west)]; //topLeft corner
-      const southEast = [Cesium.Math.toDegrees(rect.south), Cesium.Math.toDegrees(rect.east)]; //bottomRight corner
-
-      console.log(northWest, southEast);
-      http.post("/query", {
-        topLeft: northWest,
-        bottomRight: southEast,
-        zoomLevel: this.detectZoomLevel(carto.height) + 3
-      }).subscribe((res) => {
-        this.viewer.dataSources.removeAll();
-        if (!('features' in res)) {
-          return;
-        }
-
-        Cesium.GeoJsonDataSource.load(res, {})
-          .then((dataSource) => this.viewer.dataSources.add(dataSource));
-      })
-    });
   }
 
-  ngOnInit() {
-
-  }
 
   // taken from https://gist.github.com/ezze/d57e857a287677c9b43b5a6a43243b14
-  private detectZoomLevel(distance: number) {
+  private detectZoomLevel(distance: number): number | undefined {
     const scene = this.viewer.scene;
     const tileProvider = scene.globe._surface.tileProvider;
     const quadtree = tileProvider._quadtree;
@@ -71,7 +80,7 @@ export class CesiumDirective implements OnInit {
     return null;
   }
 
-  private getViewRectangle() {
+  private getViewRectangle(): any {
     const ellipsoid = this.viewer.scene.globe.ellipsoid;
     let rect = this.viewer.camera.computeViewRectangle(this.viewer.scene.globe.ellipsoid);
 

@@ -9,25 +9,21 @@ import org.elasticsearch.common.geo.GeoBoundingBox;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.geogrid.GeoGrid;
 import org.elasticsearch.search.aggregations.bucket.geogrid.GeoGridAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-/**
- * very original name
- */
-@PropertySource("classpath:application.properties")
 @Service
-public class ElasticQueries {
+public class AggregationQuery {
     public static final int QUERY_MAX_SIZE = 1500;
 
     @Value("${spring.elasticsearch.rest.index}")
@@ -35,12 +31,34 @@ public class ElasticQueries {
 
     private final RestHighLevelClient highLevelClient;
 
-    public ElasticQueries(RestHighLevelClient highLevelClient) {
+    public AggregationQuery(RestHighLevelClient highLevelClient) {
         this.highLevelClient = highLevelClient;
     }
 
     @SneakyThrows
-    public Map<String, Map<String, Object>> aggregateEntities(Coordinates coordinates) {
+    public Map<String, Map<String, Object>> aggregateTiles(Coordinates coordinates) {
+        SearchRequest searchRequest = createSearchRequest(coordinates);
+
+        SearchResponse response = highLevelClient.search(searchRequest, RequestOptions.DEFAULT);
+        GeoGrid grid = response.getAggregations().get("grid");
+
+        HashMap<String, Map<String, Object>> tileToProperties = new HashMap<>();
+        for (GeoGrid.Bucket bucket : grid.getBuckets()) {
+            // insert the sub-aggregation into the properties map.
+            ParsedStringTerms parsedStringTerms = bucket.getAggregations().get("terms");
+            Map<String, Object> properties = parsedStringTerms.getBuckets().stream()
+                    .collect(Collectors.toMap(
+                            MultiBucketsAggregation.Bucket::getKeyAsString,
+                            MultiBucketsAggregation.Bucket::getDocCount
+                    ));
+            // insert the total entities that were queried in the tile.
+            properties.put("Total Entities", bucket.getDocCount());
+            tileToProperties.put(bucket.getKeyAsString(), properties);
+        }
+        return tileToProperties;
+    }
+
+    private SearchRequest createSearchRequest(Coordinates coordinates) {
         TermsAggregationBuilder terms = AggregationBuilders.terms("terms")
                 .field("vessel_type.keyword")
                 .size(QUERY_MAX_SIZE);
@@ -55,28 +73,10 @@ public class ElasticQueries {
                 .subAggregation(terms)
                 .size(QUERY_MAX_SIZE);
 
-        SearchRequest searchRequest = new SearchRequest()
+        return new SearchRequest()
                 .indices(index)
                 .source(SearchSourceBuilder.searchSource()
                         .query(QueryBuilders.matchAllQuery())
                         .aggregation(geoTile));
-
-        SearchResponse response = highLevelClient.search(searchRequest, RequestOptions.DEFAULT);
-        GeoGrid grid = response.getAggregations().get("grid");
-
-
-        HashMap<String, Map<String, Object>> tileToProperties = new HashMap<>();
-        for (GeoGrid.Bucket bucket : grid.getBuckets()) {
-            Map<String, Object> properties = new HashMap<>();
-            properties.put("Total Entities", bucket.getDocCount());
-
-            ParsedStringTerms parsedStringTerms = bucket.getAggregations().get("terms");
-            for (Terms.Bucket termsBucket : parsedStringTerms.getBuckets()) {
-                properties.put(termsBucket.getKeyAsString(), termsBucket.getDocCount());
-            }
-
-            tileToProperties.put(bucket.getKeyAsString(), properties);
-        }
-        return tileToProperties;
     }
 }
