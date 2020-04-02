@@ -1,5 +1,5 @@
-import {Directive, ElementRef} from '@angular/core';
-import {HttpClient} from "@angular/common/http";
+import { Directive, ElementRef } from '@angular/core';
+import { HttpClient } from "@angular/common/http";
 
 interface Coordinates {
   topLeft: Array<number>;
@@ -26,9 +26,30 @@ export class CesiumDirective {
         }
 
         this.viewer.dataSources.removeAll();
+        this.viewer.entities.removeAll();
         Cesium.GeoJsonDataSource.load(res, {})
-          .then((dataSource) => this.viewer.dataSources.add(dataSource));
+          .then((dataSource) => this.labelEntities(dataSource));
       })
+  }
+
+  private labelEntities(dataSource: any) {
+    const entities = dataSource.entities.values;
+    for (let i = 0; i < entities.length; i++) {
+
+      let center = Cesium.BoundingSphere.fromPoints(entities[i].polygon.hierarchy.getValue().positions).center;
+      Cesium.Ellipsoid.WGS84.scaleToGeodeticSurface(center, center);
+
+      entities[i].merge({
+        position: center,
+        label: {
+          text: entities[i].properties["Total Entities"].getValue().toString(),
+          font: '20px sans-serif',
+          showBackground: true,
+          horizontalOrigin: Cesium.HorizontalOrigin.BOTTOM,
+        }
+      });
+    }
+    this.viewer.dataSources.add(dataSource);
   }
 
   private calculateCoordinates(): Coordinates {
