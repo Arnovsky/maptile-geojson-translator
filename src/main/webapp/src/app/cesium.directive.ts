@@ -10,6 +10,7 @@ interface Coordinates {
 @Directive({
   selector: '[appCesium]'
 })
+
 export class CesiumDirective {
   private readonly viewer: any;
 
@@ -83,7 +84,10 @@ export class CesiumDirective {
   }
 
   private createCesiumViewer(): any {
-    return new Cesium.Viewer(this.el.nativeElement, {
+    Cesium.Camera.DEFAULT_VIEW_FACTOR = 0;
+    Cesium.Camera.DEFAULT_VIEW_RECTANGLE = Cesium.Rectangle.fromRadians(0.4, -0.5, 2.5, 0.8); // TODO: env variables?
+
+    const viewer = new Cesium.Viewer(this.el.nativeElement, {
       geocoder: false,
       timeline: false,
       sceneModePicker: false,
@@ -97,8 +101,9 @@ export class CesiumDirective {
       creditViewport: undefined,
       mapMode2D: Cesium.MapMode2D.INFINITE_SCROLL
     });
+    viewer.scene.screenSpaceCameraController.maximumZoomDistance = 20000000; // TODO: env variable?
+    return viewer;
   }
-
 
   // taken from https://gist.github.com/ezze/d57e857a287677c9b43b5a6a43243b14
   private detectZoomLevel(distance: number): number | undefined {
