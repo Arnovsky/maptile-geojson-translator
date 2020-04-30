@@ -90,6 +90,7 @@ export class CesiumDirective {
     const viewer = new Cesium.Viewer(this.el.nativeElement, {
       geocoder: false,
       timeline: false,
+      animation: false,
       sceneModePicker: false,
       selectionIndicator: false,
       baseLayerPicker: false,
