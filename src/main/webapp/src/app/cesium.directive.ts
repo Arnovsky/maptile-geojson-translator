@@ -32,17 +32,34 @@ export class CesiumDirective {
       })
   }
 
+  private static normalize(values: any, target: number): any {
+    const max = Math.max(...values);
+    const min = Math.min(...values);
+    // return (target - min) / (max - min);
+    return Math.abs(1.0 - (target - min) / (max - min)) / 3.0;
+  }
+
+  private static calculateHeatmapColor(values: any, target: number) {
+    return new Cesium.Color(1.0, CesiumDirective.normalize(values, target), CesiumDirective.normalize(values, target), 0.5);
+  }
+
   private labelEntities(dataSource: any) {
     const entities = dataSource.entities.values;
-    for (let i = 0; i < entities.length; i++) {
+    const values = entities.map(entity => entity.properties["Total Entities"].getValue());
 
+    for (let i = 0; i < entities.length; i++) {
       let center = Cesium.BoundingSphere.fromPoints(entities[i].polygon.hierarchy.getValue().positions).center;
       Cesium.Ellipsoid.WGS84.scaleToGeodeticSurface(center, center);
 
+      const totalEntities = entities[i].properties["Total Entities"].getValue();
+      const color = CesiumDirective.calculateHeatmapColor(values, totalEntities);
+
+      entities[i].polygon.material = new Cesium.ColorMaterialProperty(color);
+      entities[i].polygon.outline = false;
       entities[i].merge({
         position: center,
         label: {
-          text: entities[i].properties["Total Entities"].getValue().toString(),
+          text: totalEntities.toString(),
           font: '20px sans-serif',
           showBackground: true,
           horizontalOrigin: Cesium.HorizontalOrigin.BOTTOM,
