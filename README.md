@@ -14,17 +14,18 @@ We take the tiles received from Elasticsearch and translates it to GeoJSON then 
 
 ### Why not use [`GeoHash`](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-geohashgrid-aggregation.html) aggregation
 
-#### Rational
-We used WMTS based map server and thought we might be able to add the clustering via a new layer, the idea fell through,
-but we ended using the [GeoTile](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-geotilegrid-aggregation.html) aggregation.
+#### Rationale
+We used WMTS based map server and thought we might be able to add the clustering via a new layer in the map server, the idea fell through,
+but we ended using the WMTS based [GeoTile](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-geotilegrid-aggregation.html) aggregation.
 
 #### GeoHash
 This demo could have been made using GeoHash, the only difference would have been the translation 'layer'.
 Instead of translation from WMTS, we would need to translate a GeoHash.
 
-Basically both methods achieve the same result, only via a different 'translation' medium.
+Both methods achieve the same result, only via a different "translation" medium.
 
 ### Setup
-To run this demo you would need to load the `geojson.json` file into Elasticsearch (I did this via the Kibana UI).
-
-Once finished loading you can run the application, it will build and server the Angular app for you.
+- Load the `geojson.json` file into Elasticsearch (I did this via the Kibana UI).
+- Change the Elasticsearch index in `application.properties` to your desired index.
+- Run the application via `gradle run` - this will also build the webapp (make sure you have npm installed)
+- Go to http:/localhost:8080/ (by defualt)
